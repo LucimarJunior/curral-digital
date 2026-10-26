@@ -43,7 +43,8 @@ function validDate(date: string): boolean {
 export function parseTruTestCsv(csv: string): TruTestParseResult {
   const parsed = Papa.parse<Record<string, string>>(csv.replace(/^\uFEFF/, ''), {
     header: true,
-    delimiter: ';',
+    // Detecta automaticamente vírgula, ponto e vírgula ou tabulação.
+    delimitersToGuess: [';', ',', '\t'],
     skipEmptyLines: 'greedy',
     transformHeader: (header) => header.trim().replace(/^\uFEFF/, ''),
   })
