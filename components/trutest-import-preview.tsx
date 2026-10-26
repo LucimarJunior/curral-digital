@@ -125,7 +125,7 @@ export default function TruTestImportPreview({ farmId, pastures }: Props) {
     <section className="space-y-5 rounded-2xl border border-outline-variant bg-surface-container-lowest p-6">
       <div>
         <h3 className="text-xl font-bold text-on-surface">Prévia da importação Tru-Test</h3>
-        <p className="text-sm text-outline">Leia o CSV original, confira os animais e complemente os dados do lote. Esta etapa é somente leitura.</p>
+        <p className="text-sm text-outline">Leia o CSV original, confira os animais e complemente os dados do lote antes de confirmar a gravação.</p>
       </div>
       <label className="block cursor-pointer rounded-xl border-2 border-dashed border-outline-variant p-6 text-center font-semibold">
         {loading ? 'Conferindo animais cadastrados...' : 'Selecionar arquivo CSV da Tru-Test'}
