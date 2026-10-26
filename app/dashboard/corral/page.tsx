@@ -1506,7 +1506,7 @@ export default function CorralPage() {
             <div className="p-8">
               <div className="mb-5 rounded-xl border border-amber-200 bg-amber-50 p-4 text-sm text-amber-900">
                 A importação convencional está temporariamente desativada para proteger os dados.
-                <button type="button" onClick={() => router.push('/dashboard/herd')} className="ml-2 font-bold underline">Abrir importação segura Tru-Test em Rebanho</button>
+                <button type="button" onClick={() => router.push('/dashboard/herd?import=trutest')} className="ml-2 font-bold underline">Abrir importação segura Tru-Test em Rebanho</button>
               </div>
               {!importResults ? (
                 <div className="space-y-8">
