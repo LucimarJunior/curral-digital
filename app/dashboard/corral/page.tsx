@@ -1504,6 +1504,10 @@ export default function CorralPage() {
             </div>
 
             <div className="p-8">
+              <div className="mb-5 rounded-xl border border-amber-200 bg-amber-50 p-4 text-sm text-amber-900">
+                A importação convencional está temporariamente desativada para proteger os dados.
+                <button type="button" onClick={() => router.push('/dashboard/herd')} className="ml-2 font-bold underline">Abrir importação segura Tru-Test em Rebanho</button>
+              </div>
               {!importResults ? (
                 <div className="space-y-8">
                   <div className="bg-surface-container-low p-6 rounded-3xl border border-outline-variant">
@@ -1538,7 +1542,8 @@ export default function CorralPage() {
                       <input 
                         type="file" 
                         accept=".csv,.xlsx,.xls"
-                        onChange={handleImportFile}
+                        disabled
+                        aria-label="Importação convencional desativada; utilize a importação segura em Rebanho"
                         className="absolute inset-0 w-full h-full opacity-0 cursor-pointer z-10"
                       />
                       <div className="border-2 border-dashed border-outline-variant rounded-3xl p-12 flex flex-col items-center justify-center gap-4 bg-surface-container-lowest hover:bg-surface-container-low hover:border-primary/50 transition-all group">
