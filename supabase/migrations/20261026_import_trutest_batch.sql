@@ -27,6 +27,7 @@ DECLARE
   v_count_existing integer := 0;
   v_count_skipped integer := 0;
   v_seen text[] := ARRAY[]::text[];
+  v_existing_idv uuid;
   v_pasture text := NULLIF(btrim(p_pasture), '');
 BEGIN
   IF v_user IS NULL THEN RAISE EXCEPTION 'Usuário não autenticado'; END IF;
@@ -72,6 +73,8 @@ BEGIN
       RAISE EXCEPTION 'Data inválida para IDE %', v_ide;
     END IF;
 
+    -- A RLS restringe a consulta ao rebanho autorizado. A unicidade global do IDE
+    -- impede também o cadastro de um IDE pertencente a outra fazenda.
     SELECT * INTO v_existing FROM public.cattle WHERE electronic_id = v_ide FOR UPDATE;
     IF FOUND THEN
       IF v_existing.farm_id <> p_farm_id OR v_existing.owner_id <> v_user THEN
@@ -94,6 +97,7 @@ BEGIN
     END IF;
 
     -- Uma sessão idêntica não cria uma segunda pesagem.
+    -- IMPORTANTE: a comparação é por animal, data/hora e peso, não apenas por dia.
     IF EXISTS (
       SELECT 1 FROM public.weighings
       WHERE cattle_id = v_animal_id AND farm_id = p_farm_id
