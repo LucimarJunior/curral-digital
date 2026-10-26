@@ -198,5 +198,6 @@ BEGIN
     RAISE EXCEPTION 'Falha na prevenção de duplicidade: %',v_second;
   END IF;
   RAISE NOTICE 'TESTE APROVADO (será revertido): primeiro=%, repetido=%',v_first,v_second;
-END $$;
+END $;
+SELECT 'TESTE APROVADO - cadastro, pesagem e deduplicação; dados fictícios revertidos' AS resultado_teste;
 ROLLBACK;
