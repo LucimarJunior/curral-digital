@@ -24,6 +24,32 @@ export default function TruTestImportPreview({ farmId, pastures }: Props) {
   const [breed, setBreed] = React.useState('Nelore')
   const [category, setCategory] = React.useState('Bezerro')
   const [pasture, setPasture] = React.useState('')
+  const [availablePastures, setAvailablePastures] = React.useState(pastures)
+  const [newPastureName, setNewPastureName] = React.useState('')
+  const [creatingPasture, setCreatingPasture] = React.useState(false)
+  const [pastureSaving, setPastureSaving] = React.useState(false)
+
+  React.useEffect(() => { setAvailablePastures(pastures) }, [pastures])
+
+  async function createPasture() {
+    const name = newPastureName.trim()
+    if (!farmId || !name) { setError('Informe o nome do pasto e selecione uma fazenda.'); return }
+    if (availablePastures.some(p => p.name.toLowerCase() === name.toLowerCase())) { setError('Já existe um pasto com esse nome.'); return }
+    setPastureSaving(true)
+    setError('')
+    try {
+      const { data, error: insertError } = await (supabase.from('pastures') as any)
+        .insert({ farm_id: farmId, name, status: 'Active' })
+        .select('id,name')
+        .single()
+      if (insertError) throw insertError
+      setAvailablePastures(prev => [...prev, { id: data.id, name: data.name }])
+      setPasture(data.name)
+      setNewPastureName('')
+      setCreatingPasture(false)
+    } catch (err) { setError(err instanceof Error ? err.message : 'Não foi possível cadastrar o pasto.') }
+    finally { setPastureSaving(false) }
+  }
 
   async function onFileChange(event: React.ChangeEvent<HTMLInputElement>) {
     const file = event.target.files?.[0]
@@ -162,8 +188,10 @@ export default function TruTestImportPreview({ farmId, pastures }: Props) {
               <label className="text-sm">Lote/Pasto
                 <select value={pasture} onChange={e => setPasture(e.target.value)} className="mt-1 w-full rounded-lg border p-3">
                   <option value="">Selecione um pasto cadastrado</option>
-                  {pastures.map(item => <option key={item.id} value={item.name}>{item.name}</option>)}
+                  {availablePastures.map(item => <option key={item.id} value={item.name}>{item.name}</option>)}
                 </select>
+                <button type="button" onClick={() => setCreatingPasture(v => !v)} className="mt-2 text-sm font-bold text-primary underline">+ Cadastrar novo lote/pasto</button>
+                {creatingPasture && <div className="mt-2 flex flex-wrap gap-2"><input aria-label="Nome do novo pasto" value={newPastureName} onChange={e => setNewPastureName(e.target.value)} placeholder="Nome do lote/pasto" className="min-w-0 flex-1 rounded-lg border p-2" /><button type="button" disabled={pastureSaving || !newPastureName.trim()} onClick={createPasture} className="rounded-lg bg-primary px-3 py-2 font-bold text-white disabled:opacity-40">{pastureSaving ? 'Salvando...' : 'Salvar pasto'}</button></div>}
               </label>
             </div>
             <p className="text-xs text-outline">Pai, mãe e nascimento ficam para preenchimento posterior. Animais existentes não terão seus dados cadastrais substituídos automaticamente.</p>
