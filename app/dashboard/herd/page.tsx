@@ -27,6 +27,7 @@ import {
 } from 'lucide-react'
 import Papa from 'papaparse'
 import * as XLSX from 'xlsx'
+import TruTestImportPreview from '@/components/trutest-import-preview'
 import DashboardLayout from '@/components/dashboard-layout'
 import { supabase, isSupabaseConfigured } from '@/lib/supabase'
 import { cn } from '@/lib/utils'
@@ -1460,6 +1461,10 @@ export default function HerdPage() {
             )}
 
             {isImporting ? (
+              <div className="space-y-6">
+                <TruTestImportPreview farmId={selectedFarmId} pastures={pasturesList} />
+                <details className="rounded-2xl border border-outline-variant">
+                  <summary className="cursor-pointer p-5 font-bold text-on-surface">Importação convencional (modelo completo)</summary>
               <section className="bg-surface-container-lowest p-8 rounded-2xl border border-outline-variant shadow-sm space-y-8">
                 <div className="flex items-center justify-between border-b border-outline-variant pb-4">
                   <div className="flex items-center gap-3">
@@ -1588,6 +1593,8 @@ export default function HerdPage() {
                   </div>
                 )}
               </section>
+                </details>
+              </div>
             ) : (
               <form className="space-y-8" onSubmit={handleSave}>
               {/* Identification */}
