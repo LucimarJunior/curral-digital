@@ -17,6 +17,8 @@ export default function TruTestImportPreview({ farmId, pastures }: Props) {
   const [parsed, setParsed] = React.useState<TruTestParseResult | null>(null)
   const [preview, setPreview] = React.useState<PreviewRow[]>([])
   const [loading, setLoading] = React.useState(false)
+  const [saving, setSaving] = React.useState(false)
+  const [saveResult, setSaveResult] = React.useState('')
   const [error, setError] = React.useState('')
   const [sex, setSex] = React.useState('Male')
   const [breed, setBreed] = React.useState('Nelore')
@@ -28,6 +30,7 @@ export default function TruTestImportPreview({ farmId, pastures }: Props) {
     event.target.value = ''
     if (!file) return
     setFileName(file.name)
+    setSaveResult('')
     setParsed(null)
     setPreview([])
     setError('')
@@ -74,6 +77,47 @@ export default function TruTestImportPreview({ farmId, pastures }: Props) {
     }
   }
 
+  async function confirmImport() {
+    if (!farmId || !preview.length || !pasture.trim() || !breed.trim() || !category.trim()) {
+      setError('Selecione um pasto e informe raça e categoria.')
+      return
+    }
+    if (!window.confirm(`Confirmar a importação de ${preview.length} pesagens da Tru-Test? Esta ação gravará dados no rebanho.`)) return
+    setSaving(true)
+    setError('')
+    setSaveResult('')
+    try {
+      // A função no banco faz toda a operação em uma transação, com validação de proprietário.
+      const payload = preview.map(row => ({
+        electronic_id: row.electronicId,
+        tag_number: row.visualId,
+        weight_kg: row.weightKg,
+        weighing_date: row.weighingDate,
+        weighing_time: row.weighingTime,
+        gmd: row.gmd,
+        gpv: row.gpv,
+        classification: row.classification,
+      }))
+      const { data, error: rpcError } = await supabase.rpc('import_trutest_batch' as never, {
+        p_farm_id: farmId,
+        p_rows: payload,
+        p_gender: sex,
+        p_breed: breed.trim(),
+        p_category: category.trim(),
+        p_pasture: pasture,
+      } as never)
+      if (rpcError) throw rpcError
+      const result = data as { new_animals: number; existing_animals: number; skipped_weighings: number }
+      setSaveResult(`Importação concluída: ${result.new_animals} novos, ${result.existing_animals} já cadastrados, ${result.skipped_weighings} pesagens repetidas ignoradas.`)
+      setPreview([])
+      setParsed(null)
+    } catch (err) {
+      setError(err instanceof Error ? err.message : 'Falha na importação. Nenhuma alteração deve ser considerada concluída.')
+    } finally {
+      setSaving(false)
+    }
+  }
+
   const existingCount = preview.filter(row => row.existing).length
   const newCount = preview.length - existingCount
 
@@ -88,6 +132,7 @@ export default function TruTestImportPreview({ farmId, pastures }: Props) {
         <input type="file" accept=".csv,text/csv" onChange={onFileChange} disabled={loading} className="sr-only" />
       </label>
       {fileName && <p className="text-sm text-outline">Arquivo: {fileName}</p>}
+      {saveResult && <p role="status" className="rounded-lg bg-green-50 p-3 text-sm font-semibold text-green-800">{saveResult}</p>}
       {error && <p role="alert" className="rounded-lg bg-red-50 p-3 text-sm text-red-800">{error}</p>}
       {parsed && (
         <div className="space-y-2">
@@ -129,7 +174,12 @@ export default function TruTestImportPreview({ farmId, pastures }: Props) {
               <tbody>{preview.map(row => <tr key={row.electronicId} className="border-t"><td className="p-2 font-mono">{row.electronicId}</td><td className="p-2">{row.visualId ?? 'Não informado'}</td><td className="p-2">{row.weightKg} kg</td><td className="p-2">{row.weighingDate} {row.weighingTime}</td><td className="p-2">{row.existing ? 'Nova pesagem' : 'Novo cadastro'}</td></tr>)}</tbody>
             </table>
           </div>
-          <p className="rounded-lg bg-amber-50 p-3 text-sm font-semibold text-amber-900">Prévia somente leitura: a confirmação e a gravação segura serão habilitadas na próxima etapa. Nenhum animal ou peso foi alterado.</p>
+          <div className="space-y-2">
+            <button type="button" onClick={confirmImport} disabled={saving || !pasture || !breed.trim() || !category.trim()} className="rounded-xl bg-primary px-6 py-3 font-bold text-white disabled:cursor-not-allowed disabled:opacity-40">
+              {saving ? 'Gravando pesagens...' : `Confirmar importação de ${preview.length} pesagens`}
+            </button>
+            <p className="text-xs text-outline">Requer a migração SQL import_trutest_batch aplicada no Supabase. A operação é atômica: em caso de erro, nenhuma linha do lote é gravada.</p>
+          </div>
         </>
       )}
     </section>
