@@ -11,6 +11,10 @@ on:
 jobs:
   build:
     runs-on: ubuntu-latest
+    # Valores fictícios apenas para compilar/prerenderizar, sem conexão ao banco.
+    env:
+      NEXT_PUBLIC_SUPABASE_URL: https://ci-placeholder.supabase.co
+      NEXT_PUBLIC_SUPABASE_ANON_KEY: ci-placeholder-key-not-for-production
     steps:
       - uses: actions/checkout@v4
       - uses: actions/setup-node@v4
