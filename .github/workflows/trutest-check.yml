@@ -1,0 +1,22 @@
+name: Tru-Test validation
+on:
+  pull_request:
+    paths:
+      - 'lib/trutest-import.ts'
+      - 'components/trutest-import-preview.tsx'
+      - 'app/dashboard/herd/page.tsx'
+      - 'supabase/migrations/**'
+      - '.github/workflows/trutest-check.yml'
+  workflow_dispatch:
+jobs:
+  build:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '22'
+          cache: npm
+      - run: npm ci
+      - run: npx tsc --noEmit
+      - run: npm run build
