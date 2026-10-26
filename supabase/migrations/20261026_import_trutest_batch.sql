@@ -27,17 +27,19 @@ DECLARE
   v_count_existing integer := 0;
   v_count_skipped integer := 0;
   v_seen text[] := ARRAY[]::text[];
-  v_existing_idv uuid;
   v_pasture text := NULLIF(btrim(p_pasture), '');
 BEGIN
   IF v_user IS NULL THEN RAISE EXCEPTION 'Usuário não autenticado'; END IF;
   IF NOT EXISTS (SELECT 1 FROM public.farms WHERE id = p_farm_id AND owner_id = v_user) THEN
     RAISE EXCEPTION 'Fazenda não autorizada';
   END IF;
-  IF jsonb_typeof(p_rows) IS DISTINCT FROM 'array' OR jsonb_array_length(p_rows) NOT BETWEEN 1 AND 1000 THEN
+  IF jsonb_typeof(p_rows) IS DISTINCT FROM 'array' THEN
+    RAISE EXCEPTION 'Envie uma lista de pesagens';
+  END IF;
+  IF jsonb_array_length(p_rows) NOT BETWEEN 1 AND 1000 THEN
     RAISE EXCEPTION 'Envie de 1 a 1000 pesagens';
   END IF;
-  IF p_gender NOT IN ('Male', 'Female') OR NULLIF(btrim(p_breed),'') IS NULL
+  IF p_gender IS NULL OR p_gender NOT IN ('Male', 'Female') OR NULLIF(btrim(p_breed),'') IS NULL
      OR NULLIF(btrim(p_category),'') IS NULL OR v_pasture IS NULL THEN
     RAISE EXCEPTION 'Informe sexo, raça, categoria e pasto';
   END IF;
@@ -47,6 +49,9 @@ BEGIN
 
   FOR v_item IN SELECT value FROM jsonb_array_elements(p_rows)
   LOOP
+    IF jsonb_typeof(v_item) IS DISTINCT FROM 'object' THEN
+      RAISE EXCEPTION 'Cada pesagem deve ser um objeto JSON';
+    END IF;
     v_ide := regexp_replace(coalesce(v_item->>'electronic_id',''), '[[:space:]]', '', 'g');
     v_idv := NULLIF(btrim(coalesce(v_item->>'tag_number','')), '');
     v_date_text := v_item->>'weighing_date';
