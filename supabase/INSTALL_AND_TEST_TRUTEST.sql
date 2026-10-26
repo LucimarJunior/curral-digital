@@ -165,7 +165,10 @@ BEGIN
   SELECT name INTO v_pasture FROM public.pastures
     WHERE farm_id = v_farm ORDER BY name LIMIT 1;
   IF v_pasture IS NULL THEN
-    RAISE EXCEPTION 'Teste cancelado: não há pasto cadastrado';
+    -- Pasto fictício temporário, removido pelo ROLLBACK ao final.
+    v_pasture := 'TESTE-TRUTEST-ROLLBACK';
+    INSERT INTO public.pastures (farm_id, name)
+    VALUES (v_farm, v_pasture);
   END IF;
   IF EXISTS (SELECT 1 FROM public.cattle WHERE electronic_id = v_ide) THEN
     RAISE EXCEPTION 'Teste cancelado: IDE fictício já está em uso';
