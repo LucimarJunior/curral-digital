@@ -307,6 +307,9 @@ export default function CorralPage() {
   const [selectedAnimal, setSelectedAnimal] = React.useState<Cattle | null>(null)
   const [lastReproEvent, setLastReproEvent] = React.useState<any>(null)
   const [pendingAnimals, setPendingAnimals] = React.useState<any[]>([])
+  const [showFullHistory, setShowFullHistory] = React.useState(false)
+  const [refreshMessage, setRefreshMessage] = React.useState('')
+  const [historySearch, setHistorySearch] = React.useState('')
   const [sortConfig, setSortConfig] = React.useState<{ key: string, direction: 'asc' | 'desc' } | null>({ key: 'date', direction: 'desc' })
   const [loadingPending, setLoadingPending] = React.useState(false)
   const [loading, setLoading] = React.useState(false)
@@ -508,7 +511,7 @@ export default function CorralPage() {
 
         const weightsList = (recentWeights as any[]) || []
         console.log(`Fetched ${weightsList.length} weights for farm ${farmId}`)
-        setPendingAnimals(weightsList.slice(0, 10))
+        setPendingAnimals(weightsList)
 
         const todayCount = weightsList.filter(w => new Date(w.inserted_at) >= today).length
         
@@ -1236,8 +1239,8 @@ export default function CorralPage() {
                 className="w-full pl-12 pr-4 py-4 bg-surface-container-lowest border border-outline-variant rounded-2xl font-medium outline-none focus:border-primary focus:ring-4 focus:ring-primary/5 transition-all shadow-sm"
               />
             </div>
-            <button className="w-full md:w-auto px-6 py-4 bg-surface-container-highest text-primary font-bold rounded-2xl flex items-center justify-center gap-2 border border-outline-variant hover:bg-surface-container transition-all">
-              <FileText className="w-5 h-5" /> Histórico Completo
+            <button type="button" onClick={() => setShowFullHistory(v => !v)} className="w-full md:w-auto px-6 py-4 bg-surface-container-highest text-primary font-bold rounded-2xl flex items-center justify-center gap-2 border border-outline-variant hover:bg-surface-container transition-all">
+              <FileText className="w-5 h-5" /> {showFullHistory ? 'Mostrar recentes' : 'Histórico Completo'}
             </button>
           </div>
 
@@ -1248,11 +1251,12 @@ export default function CorralPage() {
                 {activeTab === 'reproduction' ? 'Pendentes para Diagnóstico' : 'Atividades Recentes'}
               </h3>
               <div className="flex items-center gap-4 text-xs font-bold text-outline">
-                <span>TOTAL: {pendingAnimals.length}</span>
+                <span>{activeTab === 'weight' ? 'PESAGENS CARREGADAS' : 'TOTAL'}: {pendingAnimals.length}</span>
                 <span className="w-1 h-1 bg-outline-variant rounded-full"></span>
-                <button onClick={fetchPendingAnimals} className="text-primary hover:underline flex items-center gap-1">
-                  <Activity className="w-3 h-3" /> Atualizar
+                <button disabled={loadingPending} onClick={async () => { setRefreshMessage('Atualizando...'); await fetchPendingAnimals(); setRefreshMessage('Consulta concluída'); }} className="text-primary hover:underline flex items-center gap-1 disabled:opacity-50">
+                  <Activity className="w-3 h-3" /> {loadingPending ? 'Atualizando...' : 'Atualizar'}
                 </button>
+                {refreshMessage && <span role="status">{refreshMessage}</span>}
               </div>
             </div>
             
@@ -1334,7 +1338,7 @@ export default function CorralPage() {
                     </tr>
                   </thead>
                   <tbody className="divide-y divide-outline-variant">
-                    {sortedPendingAnimals.map((item, idx) => {
+                    {(activeTab === 'weight' && !showFullHistory ? sortedPendingAnimals.slice(0, 10) : sortedPendingAnimals).map((item, idx) => {
                       const daysPassed = item.inserted_at ? Math.floor((new Date().getTime() - new Date(item.inserted_at).getTime()) / (1000 * 3600 * 24)) : 0;
                       const isReadyForDiagnosis = activeTab === 'reproduction' && daysPassed >= 28;
 
