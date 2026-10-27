@@ -391,8 +391,8 @@ export default function CorralPage() {
             return sortConfig.direction === 'asc' ? aNum - bNum : bNum - aNum;
           }
         } else if (sortConfig.key === 'date') {
-          aValue = new Date(a.inserted_at).getTime();
-          bValue = new Date(b.inserted_at).getTime();
+          aValue = new Date(activeTab === 'weight' ? (a.weighing_date || a.inserted_at) : a.inserted_at).getTime();
+          bValue = new Date(activeTab === 'weight' ? (b.weighing_date || b.inserted_at) : b.inserted_at).getTime();
         } else if (sortConfig.key === 'value') {
           if (activeTab === 'weight') {
             aValue = a.weight_kg || 0;
@@ -501,7 +501,7 @@ export default function CorralPage() {
             cattle (id, tag_number, farm_id, pasture)
           `)
           .eq('farm_id', farmId)
-          .order('inserted_at', { ascending: false })
+          .order('weighing_date', { ascending: false })
           .limit(500)
         
         if (weightError) {
@@ -513,7 +513,7 @@ export default function CorralPage() {
         console.log(`Fetched ${weightsList.length} weights for farm ${farmId}`)
         setPendingAnimals(weightsList)
 
-        const todayCount = weightsList.filter(w => new Date(w.inserted_at) >= today).length
+        const todayCount = weightsList.filter(w => new Date(w.weighing_date || w.inserted_at) >= today).length
         
         const animalWeightsMap = new Map<string, any[]>();
         weightsList.forEach(w => {
@@ -531,7 +531,7 @@ export default function CorralPage() {
             const latest = animalWeights[0];
             const previous = animalWeights[1];
             const weightDiff = latest.weight_kg - previous.weight_kg;
-            const timeDiff = new Date(latest.inserted_at).getTime() - new Date(previous.inserted_at).getTime();
+            const timeDiff = new Date(latest.weighing_date || latest.inserted_at).getTime() - new Date(previous.weighing_date || previous.inserted_at).getTime();
             const days = timeDiff / (1000 * 3600 * 24);
             
             if (days > 0.5) {
@@ -1374,7 +1374,7 @@ export default function CorralPage() {
                                 </span>
                               )}
                               <span className="text-[9px] font-medium text-outline-variant mt-0.5">
-                                Realizado: {new Date(item.inserted_at).toLocaleDateString('pt-BR')}
+                                Realizado: {new Date(activeTab === 'weight' ? (item.weighing_date || item.inserted_at) : item.inserted_at).toLocaleDateString('pt-BR')}
                               </span>
                             </div>
                           </td>
@@ -1402,10 +1402,10 @@ export default function CorralPage() {
                             ) : (
                               <div className="flex flex-col">
                                 <span className="text-xs font-bold text-outline uppercase tracking-tight">
-                                  {new Date(item.inserted_at).toLocaleDateString('pt-BR')}
+                                  {new Date(activeTab === 'weight' ? (item.weighing_date || item.inserted_at) : item.inserted_at).toLocaleDateString('pt-BR')}
                                 </span>
                                 <span className="text-[10px] font-medium text-outline-variant">
-                                  {new Date(item.inserted_at).toLocaleTimeString('pt-BR', { hour: '2-digit', minute: '2-digit' })}
+                                  {new Date(activeTab === 'weight' ? (item.weighing_date || item.inserted_at) : item.inserted_at).toLocaleTimeString('pt-BR', { hour: '2-digit', minute: '2-digit' })}
                                 </span>
                               </div>
                             )}
