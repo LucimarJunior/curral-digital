@@ -307,6 +307,10 @@ export default function CorralPage() {
   const [selectedAnimal, setSelectedAnimal] = React.useState<Cattle | null>(null)
   const [lastReproEvent, setLastReproEvent] = React.useState<any>(null)
   const [pendingAnimals, setPendingAnimals] = React.useState<any[]>([])
+  const [showFullHistory, setShowFullHistory] = React.useState(false)
+  const [refreshMessage, setRefreshMessage] = React.useState('')
+  const [activitiesError, setActivitiesError] = React.useState<string | null>(null)
+  const [historySearch, setHistorySearch] = React.useState('')
   const [sortConfig, setSortConfig] = React.useState<{ key: string, direction: 'asc' | 'desc' } | null>({ key: 'date', direction: 'desc' })
   const [loadingPending, setLoadingPending] = React.useState(false)
   const [loading, setLoading] = React.useState(false)
@@ -388,8 +392,8 @@ export default function CorralPage() {
             return sortConfig.direction === 'asc' ? aNum - bNum : bNum - aNum;
           }
         } else if (sortConfig.key === 'date') {
-          aValue = new Date(a.inserted_at).getTime();
-          bValue = new Date(b.inserted_at).getTime();
+          aValue = new Date(activeTab === 'weight' ? (a.weighing_date || a.inserted_at) : a.inserted_at).getTime();
+          bValue = new Date(activeTab === 'weight' ? (b.weighing_date || b.inserted_at) : b.inserted_at).getTime();
         } else if (sortConfig.key === 'value') {
           if (activeTab === 'weight') {
             aValue = a.weight_kg || 0;
@@ -438,6 +442,7 @@ export default function CorralPage() {
     }
 
     setLoadingPending(true)
+    setActivitiesError(null)
     try {
       const today = new Date();
       today.setHours(0, 0, 0, 0);
@@ -508,9 +513,9 @@ export default function CorralPage() {
 
         const weightsList = (recentWeights as any[]) || []
         console.log(`Fetched ${weightsList.length} weights for farm ${farmId}`)
-        setPendingAnimals(weightsList.slice(0, 10))
+        setPendingAnimals(weightsList.sort((a, b) => new Date(b.weighing_date || b.inserted_at).getTime() - new Date(a.weighing_date || a.inserted_at).getTime()))
 
-        const todayCount = weightsList.filter(w => new Date(w.inserted_at) >= today).length
+        const todayCount = weightsList.filter(w => new Date(w.weighing_date || w.inserted_at) >= today).length
         
         const animalWeightsMap = new Map<string, any[]>();
         weightsList.forEach(w => {
@@ -528,7 +533,7 @@ export default function CorralPage() {
             const latest = animalWeights[0];
             const previous = animalWeights[1];
             const weightDiff = latest.weight_kg - previous.weight_kg;
-            const timeDiff = new Date(latest.inserted_at).getTime() - new Date(previous.inserted_at).getTime();
+            const timeDiff = new Date(latest.weighing_date || latest.inserted_at).getTime() - new Date(previous.weighing_date || previous.inserted_at).getTime();
             const days = timeDiff / (1000 * 3600 * 24);
             
             if (days > 0.5) {
@@ -577,6 +582,7 @@ export default function CorralPage() {
       }
     } catch (err: any) {
       console.error('Error fetching pending/recent:', err.message || err)
+      setActivitiesError(err.message || 'Não foi possível carregar as atividades. Tente atualizar.')
     } finally {
       setLoadingPending(false)
     }
@@ -1236,8 +1242,8 @@ export default function CorralPage() {
                 className="w-full pl-12 pr-4 py-4 bg-surface-container-lowest border border-outline-variant rounded-2xl font-medium outline-none focus:border-primary focus:ring-4 focus:ring-primary/5 transition-all shadow-sm"
               />
             </div>
-            <button className="w-full md:w-auto px-6 py-4 bg-surface-container-highest text-primary font-bold rounded-2xl flex items-center justify-center gap-2 border border-outline-variant hover:bg-surface-container transition-all">
-              <FileText className="w-5 h-5" /> Histórico Completo
+            <button type="button" onClick={() => setShowFullHistory(v => !v)} className="w-full md:w-auto px-6 py-4 bg-surface-container-highest text-primary font-bold rounded-2xl flex items-center justify-center gap-2 border border-outline-variant hover:bg-surface-container transition-all">
+              <FileText className="w-5 h-5" /> {showFullHistory ? 'Mostrar recentes' : 'Histórico Completo'}
             </button>
           </div>
 
@@ -1248,14 +1254,16 @@ export default function CorralPage() {
                 {activeTab === 'reproduction' ? 'Pendentes para Diagnóstico' : 'Atividades Recentes'}
               </h3>
               <div className="flex items-center gap-4 text-xs font-bold text-outline">
-                <span>TOTAL: {pendingAnimals.length}</span>
+                <span>{activeTab === 'weight' ? 'PESAGENS CARREGADAS' : 'TOTAL'}: {pendingAnimals.length}</span>
                 <span className="w-1 h-1 bg-outline-variant rounded-full"></span>
-                <button onClick={fetchPendingAnimals} className="text-primary hover:underline flex items-center gap-1">
-                  <Activity className="w-3 h-3" /> Atualizar
+                <button disabled={loadingPending} onClick={async () => { setRefreshMessage('Atualizando...'); await fetchPendingAnimals(); setRefreshMessage('Consulta concluída'); }} className="text-primary hover:underline flex items-center gap-1 disabled:opacity-50">
+                  <Activity className="w-3 h-3" /> {loadingPending ? 'Atualizando...' : 'Atualizar'}
                 </button>
+                {refreshMessage && <span role="status">{refreshMessage}</span>}
               </div>
             </div>
             
+            {activitiesError && <div role="alert" className="px-8 py-4 text-red-700 bg-red-50">Erro ao consultar atividades: {activitiesError}</div>}
             {loadingPending ? (
               <div className="p-12 flex justify-center">
                 <Loader2 className="w-8 h-8 animate-spin text-primary opacity-20" />
@@ -1334,7 +1342,7 @@ export default function CorralPage() {
                     </tr>
                   </thead>
                   <tbody className="divide-y divide-outline-variant">
-                    {sortedPendingAnimals.map((item, idx) => {
+                    {(activeTab === 'weight' && !showFullHistory ? sortedPendingAnimals.slice(0, 10) : sortedPendingAnimals).map((item, idx) => {
                       const daysPassed = item.inserted_at ? Math.floor((new Date().getTime() - new Date(item.inserted_at).getTime()) / (1000 * 3600 * 24)) : 0;
                       const isReadyForDiagnosis = activeTab === 'reproduction' && daysPassed >= 28;
 
@@ -1370,7 +1378,7 @@ export default function CorralPage() {
                                 </span>
                               )}
                               <span className="text-[9px] font-medium text-outline-variant mt-0.5">
-                                Realizado: {new Date(item.inserted_at).toLocaleDateString('pt-BR')}
+                                Realizado: {new Date(activeTab === 'weight' ? (item.weighing_date || item.inserted_at) : item.inserted_at).toLocaleDateString('pt-BR')}
                               </span>
                             </div>
                           </td>
@@ -1398,10 +1406,10 @@ export default function CorralPage() {
                             ) : (
                               <div className="flex flex-col">
                                 <span className="text-xs font-bold text-outline uppercase tracking-tight">
-                                  {new Date(item.inserted_at).toLocaleDateString('pt-BR')}
+                                  {new Date(activeTab === 'weight' ? (item.weighing_date || item.inserted_at) : item.inserted_at).toLocaleDateString('pt-BR')}
                                 </span>
                                 <span className="text-[10px] font-medium text-outline-variant">
-                                  {new Date(item.inserted_at).toLocaleTimeString('pt-BR', { hour: '2-digit', minute: '2-digit' })}
+                                  {new Date(activeTab === 'weight' ? (item.weighing_date || item.inserted_at) : item.inserted_at).toLocaleTimeString('pt-BR', { hour: '2-digit', minute: '2-digit' })}
                                 </span>
                               </div>
                             )}
@@ -1504,6 +1512,10 @@ export default function CorralPage() {
             </div>
 
             <div className="p-8">
+              <div className="mb-5 rounded-xl border border-amber-200 bg-amber-50 p-4 text-sm text-amber-900">
+                A importação convencional está temporariamente desativada para proteger os dados.
+                <button type="button" onClick={() => router.push('/dashboard/herd?import=trutest')} className="ml-2 font-bold underline">Abrir importação segura Tru-Test em Rebanho</button>
+              </div>
               {!importResults ? (
                 <div className="space-y-8">
                   <div className="bg-surface-container-low p-6 rounded-3xl border border-outline-variant">
@@ -1538,7 +1550,8 @@ export default function CorralPage() {
                       <input 
                         type="file" 
                         accept=".csv,.xlsx,.xls"
-                        onChange={handleImportFile}
+                        disabled
+                        aria-label="Importação convencional desativada; utilize a importação segura em Rebanho"
                         className="absolute inset-0 w-full h-full opacity-0 cursor-pointer z-10"
                       />
                       <div className="border-2 border-dashed border-outline-variant rounded-3xl p-12 flex flex-col items-center justify-center gap-4 bg-surface-container-lowest hover:bg-surface-container-low hover:border-primary/50 transition-all group">

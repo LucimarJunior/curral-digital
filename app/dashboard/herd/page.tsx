@@ -99,6 +99,14 @@ export default function HerdPage() {
   const [status, setStatus] = React.useState<'idle' | 'success' | 'error'>('idle')
   const [errorMessage, setErrorMessage] = React.useState('')
   const [isImporting, setIsImporting] = React.useState(false)
+
+  React.useEffect(() => {
+    const params = new URLSearchParams(window.location.search)
+    if (params.get('import') === 'trutest') {
+      setActiveTab('form')
+      setIsImporting(true)
+    }
+  }, [])
   const [importLoading, setImportLoading] = React.useState(false)
   const [importProgress, setImportProgress] = React.useState({ current: 0, total: 0 })
   const [importResults, setImportResults] = React.useState<{ success: number, error: number, details: string[] } | null>(null)
