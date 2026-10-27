@@ -309,6 +309,7 @@ export default function CorralPage() {
   const [pendingAnimals, setPendingAnimals] = React.useState<any[]>([])
   const [showFullHistory, setShowFullHistory] = React.useState(false)
   const [refreshMessage, setRefreshMessage] = React.useState('')
+  const [activitiesError, setActivitiesError] = React.useState<string | null>(null)
   const [historySearch, setHistorySearch] = React.useState('')
   const [sortConfig, setSortConfig] = React.useState<{ key: string, direction: 'asc' | 'desc' } | null>({ key: 'date', direction: 'desc' })
   const [loadingPending, setLoadingPending] = React.useState(false)
@@ -441,6 +442,7 @@ export default function CorralPage() {
     }
 
     setLoadingPending(true)
+    setActivitiesError(null)
     try {
       const today = new Date();
       today.setHours(0, 0, 0, 0);
@@ -501,7 +503,7 @@ export default function CorralPage() {
             cattle (id, tag_number, farm_id, pasture)
           `)
           .eq('farm_id', farmId)
-          .order('weighing_date', { ascending: false })
+          .order('inserted_at', { ascending: false })
           .limit(500)
         
         if (weightError) {
@@ -511,7 +513,7 @@ export default function CorralPage() {
 
         const weightsList = (recentWeights as any[]) || []
         console.log(`Fetched ${weightsList.length} weights for farm ${farmId}`)
-        setPendingAnimals(weightsList)
+        setPendingAnimals(weightsList.sort((a, b) => new Date(b.weighing_date || b.inserted_at).getTime() - new Date(a.weighing_date || a.inserted_at).getTime()))
 
         const todayCount = weightsList.filter(w => new Date(w.weighing_date || w.inserted_at) >= today).length
         
@@ -580,6 +582,7 @@ export default function CorralPage() {
       }
     } catch (err: any) {
       console.error('Error fetching pending/recent:', err.message || err)
+      setActivitiesError(err.message || 'Não foi possível carregar as atividades. Tente atualizar.')
     } finally {
       setLoadingPending(false)
     }
@@ -1260,6 +1263,7 @@ export default function CorralPage() {
               </div>
             </div>
             
+            {activitiesError && <div role="alert" className="px-8 py-4 text-red-700 bg-red-50">Erro ao consultar atividades: {activitiesError}</div>}
             {loadingPending ? (
               <div className="p-12 flex justify-center">
                 <Loader2 className="w-8 h-8 animate-spin text-primary opacity-20" />
